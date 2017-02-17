@@ -1,12 +1,23 @@
 #import <UIKit/UIKit.h>
 #import "TIDEBioServer.h"
+#import "TIDESettings.h"
 
-%ctor
+void reloadSettings(CFNotificationCenterRef center,
+                    void *observer,
+                    CFStringRef name,
+                    const void *object,
+                    CFDictionaryRef userInfo)
 {
-	if ([NSBundle.mainBundle.bundleIdentifier isEqual:@"com.apple.springboard"])
-	{
+    [[TIDESettings sharedInstance] reloadSettings];
+}
+
+%ctor {
+	if (IN_SPRINGBOARD) {
 		[[TIDEBioServer sharedInstance] setUpForMonitoring];
 	}
+
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, &reloadSettings, CFSTR("com.shade.touchideverywhere/reloadSettings"), NULL, CFNotificationSuspensionBehaviorDeliverImmediately);
+	[TIDESettings sharedInstance];
 }
 
 @interface SBLockStateAggregator : NSObject
@@ -15,7 +26,7 @@
 - (_Bool)hasAnyLockState;
 @end
 
-// Dunno if I even need this... 
+// Dunno if I even need this...
 /*
 BOOL wasMonitoring = NO;
 %hook SBLockStateAggregator

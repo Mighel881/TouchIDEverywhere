@@ -1,9 +1,13 @@
-@interface TIDESettings : NSObject
-+(id) sharedInstance;
+@interface TIDESettings : NSObject {
+      NSDictionary *_settings;
+}
++ (instancetype)sharedInstance;
 
--(BOOL) enabled;
--(BOOL) fillUserName;
--(BOOL) autoEnter;
--(BOOL) advancedTextSupport; 
--(BOOL) useAppellancy;
+- (void)reloadSettings;
+
+- (BOOL)enabled;
+- (BOOL)fillUserName;
+- (BOOL)autoEnter;
+- (BOOL)advancedTextSupport;
+- (BOOL)useAppellancy;
 @end

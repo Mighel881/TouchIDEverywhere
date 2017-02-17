@@ -1,5 +1,7 @@
 ARCHS = armv7 arm64
-CFLAGS = -fobjc-arc
+CFLAGS = -fobjc-arc -O2
+TARGET = iphone:9.3
+
 include $(THEOS)/makefiles/common.mk
 
 TWEAK_NAME = TouchIDEverywhere

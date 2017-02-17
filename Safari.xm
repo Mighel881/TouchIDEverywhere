@@ -1,7 +1,6 @@
 #import <UIKit/UIKit.h>
 #import "UICKeyChainStore.h"
 #import <UIKit/UIKit.h>
-#import <WebKit/WebView.h>
 #import "TIDESettings.h"
 
 @interface UIWebBrowserView : NSObject {
@@ -15,21 +14,21 @@
 @end
 
 @interface SafariWebView // : WKWebView
--(NSURL*) URL;
+- (NSURL*)URL;
 - (void)evaluateJavaScript:(NSString *)javaScriptString
          completionHandler:(void (^)(id,
                                      NSError *))completionHandle;
 @end
 
 @interface TabDocumentWK2
--(SafariWebView*) webView;
--(void) TIDE_complete:(id)arg1;
--(void) TIDE_storeUsername:(NSString*)u password:(NSString*)p;
+- (SafariWebView*)webView;
+- (void)TIDE_complete:(id)arg1;
+- (void)TIDE_storeUsername:(NSString*)u password:(NSString*)p;
 @end
 
 @interface TabDocumentWebBrowserView (touchideverywhere)
--(void) TIDE_complete:(id)arg1;
--(void) TIDE_storeUsername:(NSString*)u password:(NSString*)p;
+- (void)TIDE_complete:(id)arg1;
+- (void)TIDE_storeUsername:(NSString*)u password:(NSString*)p;
 @end
 
 TabDocumentWebBrowserView *currentSafariView = nil;
@@ -43,18 +42,15 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
                     const void *object,
                     CFDictionaryRef userInfo)
 {
-    if (currentSafariView)
-    {
+    if (currentSafariView) {
     	[currentSafariView TIDE_complete:nil];
     	CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), (void*)observer, CFSTR("com.efrederickson.touchideverywhere/success"), NULL);
-		CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/stopMonitoring"), nil, nil, YES); // Should already have been done though
+			CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/stopMonitoring"), nil, nil, YES); // Should already have been done though
 	    currentSafariView = nil;
-    }
-    else if (currentSafariView2)
-    {
+    } else if (currentSafariView2) {
     	[currentSafariView2 TIDE_complete:nil];
     	CFNotificationCenterRemoveObserver(CFNotificationCenterGetDarwinNotifyCenter(), (void*)observer, CFSTR("com.efrederickson.touchideverywhere/success"), NULL);
-		CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/stopMonitoring"), nil, nil, YES); // Should already have been done though
+			CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/stopMonitoring"), nil, nil, YES); // Should already have been done though
 	    currentSafariView2 = nil;
     }
 }
@@ -68,24 +64,21 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 	%orig;
 	//NSLog(@"TIDE: webView:didFinishLoadForFrame:");
 
-	for (NSString *urlStr in @[ @"google.com", @"gmail.com", @"youtube.com" ]) 
-	{
-		if ([[self.webView mainFrameURL] rangeOfString:urlStr].location != NSNotFound) 
-		{
+	for (NSString *urlStr in @[ @"google.com", @"gmail.com", @"youtube.com" ]) {
+		if ([[self.webView mainFrameURL] rangeOfString:urlStr].location != NSNotFound) {
 			return;
 		}
 	}
 
 	if ([TIDESettings.sharedInstance enabled] == NO)
 		return;
-		
+
 	NSString *js = @"var flag = 0; for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;) if (\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type||\"password\"===z[x].type) { flag = 1;} flag";
 	// NSString *js = [NSString stringWithFormat:@"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;)\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type?z[x].value=\"%@\":\"password\"===z[x].type&&(z[x].value=\"%@\");",username,pass];
 	NSString *hasPasswordFields_ = [self.webView stringByEvaluatingJavaScriptFromString:js];
 	BOOL hasPasswordFields = [hasPasswordFields_ boolValue];
 	//NSLog(@"TIDE: %@ %@", hasPasswordFields_, @(hasPasswordFields));
-	if (hasPasswordFields)
-	{
+	if (hasPasswordFields) {
 		NSString *a = @"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;) { if (\"password\"==z[x].type) z[x].parentNode.id; }";
 		formName = [self.webView stringByEvaluatingJavaScriptFromString:a];
 		//NSLog(@"TIDE: form %@", formName);
@@ -99,12 +92,11 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 		[self.webView stringByEvaluatingJavaScriptFromString:formCatcher];
 
 
-		if ((userName!= nil && userName.length > 0) || (password != nil && password.length > 0))
-		{
+		if ((userName!= nil && userName.length > 0) || (password != nil && password.length > 0)) {
 			//NSLog(@"TIDE: begin startMonitoring for safari");
 			currentSafariView = self;
 			CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (void*)observer, &touchIdSuccess_safari, CFSTR("com.efrederickson.touchideverywhere/success"), NULL, 0);
-	    	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/startMonitoring"), nil, nil, YES);
+	    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/startMonitoring"), nil, nil, YES);
 		}
 		currentSafariView = self;
 
@@ -116,16 +108,13 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 	}
 }
 
-- (void)webView:(id)arg1 willCloseFrame:(id)arg2
-{
-	if ([TIDESettings.sharedInstance enabled] == NO)
-	{
+- (void)webView:(id)arg1 willCloseFrame:(id)arg2 {
+	if ([TIDESettings.sharedInstance enabled] == NO) {
 		%orig;
 		return;
 	}
-		
-	if (currentSafariView)
-	{
+
+	if (currentSafariView) {
 		NSString *usernameJs = @"var username=\"\"; var password=\"\";	for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;){if(\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type)username=z[x].value;else if(z[x].type===\"password\")password=z[x].value;} username; ";
 		NSString *passwordJs = @"var username=\"\"; var password=\"\";	for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;){if(\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type)username=z[x].value;else if(z[x].type===\"password\")password=z[x].value;} password; ";
 		NSString *username = [self.webView stringByEvaluatingJavaScriptFromString:usernameJs];
@@ -139,13 +128,11 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 }
 
 %new
--(void) TIDE_complete:(id)arg1
-{
-  	NSString *filler = [NSString stringWithFormat:@"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;)\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type?z[x].value=\"%@\":\"password\"===z[x].type&&(z[x].value=\"%@\");",userName,password];
+- (void)TIDE_complete:(id)arg1 {
+  NSString *filler = [NSString stringWithFormat:@"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;)\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type?z[x].value=\"%@\":\"password\"===z[x].type&&(z[x].value=\"%@\");",userName,password];
 	[self.webView stringByEvaluatingJavaScriptFromString:filler];
 
-	if ([TIDESettings.sharedInstance autoEnter])
-	{
+	if ([TIDESettings.sharedInstance autoEnter]) {
 		NSString *submitter = [NSString stringWithFormat:@"document.getElementById(\"%@\").submit();", formName];
 		[self.webView stringByEvaluatingJavaScriptFromString:submitter];
 	}
@@ -154,8 +141,7 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 }
 
 %new
--(void) TIDE_storeUsername:(NSString*)u password:(NSString*)p
-{
+-(void) TIDE_storeUsername:(NSString*)u password:(NSString*)p {
 	//NSLog(@"TIDE: store data: %@ %@", u, p);
 	NSString *keychainUserName = [NSString stringWithFormat:@"TOUCHIDEVERYWHERE-%@-username",formName];
 	NSString *keychainPassword = [NSString stringWithFormat:@"TOUCHIDEVERYWHERE-%@-password",formName];
@@ -168,17 +154,14 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 %end
 
 %hook TabDocumentWK2
-- (void)_webView:(id)arg1 navigationDidFinishDocumentLoad:(id)arg2
-{
+- (void)_webView:(id)arg1 navigationDidFinishDocumentLoad:(id)arg2 {
 	%orig;
 
 	if ([TIDESettings.sharedInstance enabled] == NO)
 		return;
-		
-	for (NSString *urlStr in @[ @"google.com", @"gmail.com", @"youtube.com" ]) 
-	{
-		if ([[self.webView URL].absoluteString rangeOfString:urlStr].location != NSNotFound) 
-		{
+
+	for (NSString *urlStr in @[ @"google.com", @"gmail.com", @"youtube.com" ]) {
+		if ([[self.webView URL].absoluteString rangeOfString:urlStr].location != NSNotFound) {
 			return;
 		}
 	}
@@ -189,12 +172,11 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
                                      NSError *error){
 		BOOL hasPasswordFields = [result boolValue];
 		//NSLog(@"TIDE: %@ %@", hasPasswordFields_, @(hasPasswordFields));
-		if (hasPasswordFields)
-		{
+		if (hasPasswordFields) {
 			NSString *a = @"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;) { if (\"password\"==z[x].type) z[x].parentNode.id; }";
 			[self.webView evaluateJavaScript:a completionHandler:^(id result,
                                      NSError *error){
-				formName = result; 
+				formName = result;
 				NSLog(@"TIDE: form %@", formName);
 				//NSLog(@"TIDE: form %@", formName);
 
@@ -209,11 +191,10 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
                                      NSError *error){
 
 
-					if ((userName!= nil && userName.length > 0) || (password != nil && password.length > 0))
-					{
+					if ((userName!= nil && userName.length > 0) || (password != nil && password.length > 0)) {
 						//NSLog(@"TIDE: begin startMonitoring for safari");
 						CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), (void*)observer, &touchIdSuccess_safari, CFSTR("com.efrederickson.touchideverywhere/success"), NULL, 0);
-				    	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/startMonitoring"), nil, nil, YES);
+				    CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/startMonitoring"), nil, nil, YES);
 					}
 
 					//NSString *formHook = [NSString stringWithFormat:@"var element = document.getElementById(\"%@\");var oldSub=element.submit; element.submit=function(){	var username; var password;	for (i = 0; i < element.elements.length;i++) {if (element.elements[i].type===\"password\") password = element.elements[i].value; else username=element.elements[i].value; }	window.open(str.concat(\"touchideverywhere://store?username=\",username,\"&password=\",password)); oldSub.apply(element); };",formName];
@@ -225,22 +206,19 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 
 		}
 	}];
-	
+
 }
 
-- (void)_loadingControllerDidStartLoading
-{
-	if ([TIDESettings.sharedInstance enabled] == NO)
-	{
+- (void)_loadingControllerDidStartLoading {
+	if ([TIDESettings.sharedInstance enabled] == NO) {
 		%orig;
 		return;
 	}
-		
-	if (currentSafariView2)
-	{
+
+	if (currentSafariView2) {
 		NSString *usernameJs = @"var username=\"\"; var password=\"\";	for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;){if(\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type)username=z[x].value;else if(z[x].type===\"password\")password=z[x].value;} username; ";
 		NSString *passwordJs = @"var username=\"\"; var password=\"\";	for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;){if(\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type)username=z[x].value;else if(z[x].type===\"password\")password=z[x].value;} password; ";
-		
+
 		[self.webView evaluateJavaScript:usernameJs completionHandler:^(id result, NSError*error) {
 			NSString *username = result;
 			[self.webView evaluateJavaScript:passwordJs completionHandler:^(id result2, NSError*e) {
@@ -262,9 +240,8 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 }
 
 %new
--(void) TIDE_complete:(id)arg1
-{
-  	NSString *filler = [NSString stringWithFormat:@"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;)\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type?z[x].value=\"%@\":\"password\"===z[x].type&&(z[x].value=\"%@\");",userName,password];
+- (void)TIDE_complete:(id)arg1 {
+  NSString *filler = [NSString stringWithFormat:@"for(var z=document.getElementsByTagName(\"input\"),x=z.length;x--;)\"username\"===z[x].type||\"username\"===z[x].name||\"email\"===z[x].type||\"email\"===z[x].name||\"user\"===z[x].name||\"user\"===z[x].type?z[x].value=\"%@\":\"password\"===z[x].type&&(z[x].value=\"%@\");",userName,password];
 
 	NSString *submitter = [NSString stringWithFormat:@"document.getElementById(\"%@\").submit();", formName];
 
@@ -275,8 +252,7 @@ void touchIdSuccess_safari(CFNotificationCenterRef center,
 }
 
 %new
--(void) TIDE_storeUsername:(NSString*)u password:(NSString*)p
-{
+- (void)TIDE_storeUsername:(NSString*)u password:(NSString*)p {
 	//NSLog(@"TIDE: store data: %@ %@", u, p);
 	NSString *keychainUserName = [NSString stringWithFormat:@"TOUCHIDEVERYWHERE-%@-username",formName];
 	NSString *keychainPassword = [NSString stringWithFormat:@"TOUCHIDEVERYWHERE-%@-password",formName];

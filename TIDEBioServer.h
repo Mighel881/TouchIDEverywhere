@@ -1,19 +1,18 @@
-#import <libappellancy/AFaceDetector.h>
-
-@protocol SBUIBiometricEventMonitorDelegate
+@protocol _SBUIBiometricKitInterfaceDelegate
 @required
--(void)biometricEventMonitor:(id)monitor handleBiometricEvent:(unsigned)event;
+- (void)biometricKitInterface:(id)interface handleEvent:(unsigned long long)event;
 @end
 
-@interface SBUIBiometricEventMonitor : NSObject
-- (void)addObserver:(id)arg1;
-- (void)removeObserver:(id)arg1;
-- (void)_startMatching;
-- (void)_setMatchingEnabled:(BOOL)arg1;
-- (BOOL)isMatchingEnabled;
+@interface _SBUIBiometricKitInterface : NSObject
+@property (assign,nonatomic) id<_SBUIBiometricKitInterfaceDelegate> delegate;
+- (void)cancel;
+- (void)setDelegate:(id<_SBUIBiometricKitInterfaceDelegate>)arg1;
+- (int)detectFingerWithOptions:(id)arg1 ;
+- (int)matchWithMode:(unsigned long long)arg1 andCredentialSet:(id)arg2;
 @end
 
 @interface BiometricKit : NSObject
+@property (assign,nonatomic) id delegate;
 + (id)manager;
 @end
 
@@ -23,15 +22,14 @@
 #define TouchIDMatched     3
 #define TouchIDNotMatched  10
 
-@interface TIDEBioServer : NSObject <SBUIBiometricEventMonitorDelegate, AFaceDetectorProtocol> {
+@interface TIDEBioServer : NSObject <_SBUIBiometricKitInterfaceDelegate> {
 	BOOL isMonitoring;
-	BOOL previousMatchingSetting;
-	NSHashTable *oldObservers;
 	NSArray *activatorListenerNames;
+	id _oldDelegate;
 }
-+(id)sharedInstance;
--(void)startMonitoring;
--(void)stopMonitoring;
--(void)setUpForMonitoring;
--(BOOL) isMonitoring;
++ (instancetype)sharedInstance;
+- (void)startMonitoring;
+- (void)stopMonitoring;
+- (void)setUpForMonitoring;
+- (BOOL)isMonitoring;
 @end

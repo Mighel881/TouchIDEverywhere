@@ -4,15 +4,11 @@
 #import <substrate.h>
 #import <UIKit/UIKit.h>
 #import <libactivator/libactivator.h>
-#import <libappellancy/AFaceDetector.h>
 #import "TIDESettings.h"
 
 @interface UIApplication (SpringBoard)
 -(BOOL) isLocked;
 @end
-
-#define ENABLE_VH "virtualhome.enable"
-#define DISABLE_VH "virtualhome.disable"
 
 void startMonitoring_(CFNotificationCenterRef center,
                     void *observer,
@@ -34,49 +30,41 @@ void stopMonitoring_(CFNotificationCenterRef center,
 
 @implementation TIDEBioServer
 
-+(id)sharedInstance {
-	static TIDEBioServer* sharedInstance = nil;
-	static dispatch_once_t token = 0;
-	dispatch_once(&token, ^{
-		sharedInstance = [self new];
-		sharedInstance->oldObservers = [NSHashTable new];
-	});
-	return sharedInstance;
+
++ (instancetype)sharedInstance {
+    static TIDEBioServer *sharedInstance = nil;
+    static dispatch_once_t onceToken;
+    dispatch_once(&onceToken, ^{
+        sharedInstance = [[self alloc] init];
+    });
+    return sharedInstance;
 }
 
--(void)biometricEventMonitor:(id)monitor handleBiometricEvent:(unsigned)event 
-{
-	switch(event) 
-	{
-		case TouchIDMatched:
-			[self notifyClientsOfSuccess];
-			[self stopMonitoring];
+- (void)biometricKitInterface:(id)interface handleEvent:(unsigned long long)event {
+	if (!self.isMonitoring) {
+		return;
+	}
+
+	switch (event) {
+		case TouchIDMatched: {
+      [self notifyClientsOfSuccess];
+      [self stopMonitoring];
 			break;
-		case TouchIDNotMatched:
-			[self notifyClientsOfFailure];
-			break;
-		default:
-			break;
+    }
+		case TouchIDNotMatched: {
+      [self notifyClientsOfFailure];
+      break;
+    }
+    default:
+      break;
 	}
 }
 
+- (void)startMonitoring {
+	if (isMonitoring || [[UIApplication sharedApplication] isLocked]) {
+    return;
+  }
 
--(void)faceRecognized:(NSString*)recognized confidence:(int)confidence
-{
-    [self notifyClientsOfSuccess];
-    [self stopMonitoring];
-}
-
--(void)faceRejected
-{
-    [self notifyClientsOfFailure];
-}
-
--(void)startMonitoring
-{
-	if(isMonitoring || [[UIApplication sharedApplication] isLocked]) 
-		return;
-	//notify_post(DISABLE_VH);
 	activatorListenerNames = nil;
 	id activator = [objc_getClass("LAActivator") sharedInstance];
 	if (activator)
@@ -92,77 +80,51 @@ void stopMonitoring_(CFNotificationCenterRef center,
 	}
 	isMonitoring = YES;
 
-	SBUIBiometricEventMonitor* monitor = [[objc_getClass("BiometricKit") manager] delegate];
-	previousMatchingSetting = [monitor isMatchingEnabled];
-
-	oldObservers = [MSHookIvar<NSHashTable*>(monitor, "_observers") copy];
-	for (id observer in oldObservers)
-		[monitor removeObserver:observer];
-
-	[monitor addObserver:self];
-	[monitor _setMatchingEnabled:YES];
-	[monitor _startMatching];
-
-    if (objc_getClass("AFaceDetector") && [TIDESettings.sharedInstance useAppellancy])
-    {
-        [[objc_getClass("AFaceDetector") sharedDetector] registerDelegate:self];
-        [[objc_getClass("AFaceDetector") sharedDetector] start];
-    }
+  _SBUIBiometricKitInterface *interface = [[objc_getClass("BiometricKit") manager] delegate];
+  _oldDelegate = interface.delegate;
+  [interface setDelegate:self];
+	[interface matchWithMode:0 andCredentialSet:nil];
 }
 
--(void)stopMonitoring 
-{
-	if(!isMonitoring || [[UIApplication sharedApplication] isLocked]) 
-		return;
-	
+- (void)stopMonitoring {
+	if (!isMonitoring || [[UIApplication sharedApplication] isLocked]) {
+    return;
+  }
+
 	isMonitoring = NO;
-	SBUIBiometricEventMonitor* monitor = [[objc_getClass("BiometricKit") manager] delegate];
-	NSHashTable *observers = MSHookIvar<NSHashTable*>(monitor, "_observers");
-	if (observers && [observers containsObject:self])
-		[monitor removeObserver:self];
-	if (oldObservers && observers)
-		for (id observer in oldObservers)
-			[monitor addObserver:observer];
-	oldObservers = nil;
-	[monitor _setMatchingEnabled:previousMatchingSetting];
-	//notify_post(ENABLE_VH);
-    id activator = [objc_getClass("LAActivator") sharedInstance];
-    if (activator && activatorListenerNames)
-    {
-        dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
-           id event = [objc_getClass("LAEvent") eventWithName:@"libactivator.fingerprint-sensor.press.single" mode:@"application"]; // LAEventNameFingerprintSensorPressSingle
-           if (event)
-               for (NSString *listenerName in activatorListenerNames)
-                   [activator addListenerAssignment:listenerName toEvent:event];
-        });
-    }
+  _SBUIBiometricKitInterface *interface = [[objc_getClass("BiometricKit") manager] delegate];
+	[interface cancel];
+	[interface setDelegate:_oldDelegate];
+	[interface detectFingerWithOptions:nil];
 
-    if (objc_getClass("AFaceDetector") && [TIDESettings.sharedInstance useAppellancy])
-    {
-        [[objc_getClass("AFaceDetector") sharedDetector] deregisterDelegate:self];
-        [[objc_getClass("AFaceDetector") sharedDetector] stop];
-    }
+	_oldDelegate = nil;
+
+  id activator = [objc_getClass("LAActivator") sharedInstance];
+  if (activator && activatorListenerNames) {
+      dispatch_after(dispatch_time(DISPATCH_TIME_NOW, (int64_t)(1 * NSEC_PER_SEC)), dispatch_get_main_queue(), ^(void){
+         id event = [objc_getClass("LAEvent") eventWithName:@"libactivator.fingerprint-sensor.press.single" mode:@"application"]; // LAEventNameFingerprintSensorPressSingle
+         if (event)
+             for (NSString *listenerName in activatorListenerNames)
+                 [activator addListenerAssignment:listenerName toEvent:event];
+      });
+  }
 }
 
--(void) setUpForMonitoring
-{
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, &startMonitoring_, CFSTR("com.efrederickson.touchideverywhere/startMonitoring"), NULL, 0);
-	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, &stopMonitoring_, CFSTR("com.efrederickson.touchideverywhere/stopMonitoring"), NULL, 0);
+- (void)setUpForMonitoring {
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, &startMonitoring_, CFSTR("com.shade.touchideverywhere/startMonitoring"), NULL, 0);
+	CFNotificationCenterAddObserver(CFNotificationCenterGetDarwinNotifyCenter(), NULL, &stopMonitoring_, CFSTR("com.shade.touchideverywhere/stopMonitoring"), NULL, 0);
 }
 
--(void) notifyClientsOfSuccess
-{
-	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/success"), nil, nil, YES);
+- (void)notifyClientsOfSuccess {
+	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.shade.touchideverywhere/success"), nil, nil, YES);
 }
 
--(void) notifyClientsOfFailure
-{
+- (void)notifyClientsOfFailure {
 	// TODO: implement into clients
-	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.efrederickson.touchideverywhere/failure"), nil, nil, YES);
+	CFNotificationCenterPostNotification(CFNotificationCenterGetDarwinNotifyCenter(), CFSTR("com.shade.touchideverywhere/failure"), nil, nil, YES);
 }
 
--(BOOL) isMonitoring
-{
+- (BOOL)isMonitoring {
 	return isMonitoring;
 }
 @end

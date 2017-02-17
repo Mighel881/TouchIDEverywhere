@@ -1,10 +1,12 @@
-.DS_Store
-._*
+# gitignore for Theos
+
 *.deb
-.debmake
-_
+_/
+theos/
+theos
+.theos/*
+obj/
+*/obj/
 obj
-.theos
-*.bak
-debs/
-*[S|s]afari*
+.DS_Store
+packages
